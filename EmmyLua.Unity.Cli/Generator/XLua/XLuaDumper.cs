@@ -301,7 +301,7 @@ public class XLuaDumper : IDumper
         sb.AppendLine($"---@enum (key) {classFullName}");
         foreach (var csTypeField in csEnumType.Fields)
         {
-            sb.AppendLine($"---| CS.{csEnumType.Name}.{csTypeField.Name}");
+            sb.AppendLine($"---| {csTypeField.Name}");
         }
     }
 
