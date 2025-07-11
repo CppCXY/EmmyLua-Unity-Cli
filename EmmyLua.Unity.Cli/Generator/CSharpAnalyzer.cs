@@ -61,9 +61,9 @@ public class CSharpAnalyzer
         {
             return;
         }
-        
+
         var field = new CSTypeField();
-        FillBaeInfo(symbol, field);
+        FillBaseInfo(symbol, field);
         field.Comment = GetXmlSummaryComment(symbol);
         field.TypeName = symbol switch
         {
@@ -84,7 +84,7 @@ public class CSharpAnalyzer
         }
 
         var method = new CSTypeMethod();
-        FillBaeInfo(methodSymbol, method);
+        FillBaseInfo(methodSymbol, method);
         var xmlDictionary = GetXmlComment(methodSymbol);
         if (xmlDictionary.TryGetValue("<summary>", out var summary))
         {
@@ -145,10 +145,10 @@ public class CSharpAnalyzer
         }
 
         csType.BaseClass = symbol.BaseType?.ToString() ?? "";
-        
-        FillBaeInfo(symbol, csType);
+
+        FillBaseInfo(symbol, csType);
         csType.Comment = GetXmlSummaryComment(symbol);
-        
+
         if (symbol is { TypeArguments.Length: > 0 })
         {
             csType.GenericTypes = symbol.TypeArguments.Select(it => it.ToDisplayString()).ToList();
@@ -183,8 +183,8 @@ public class CSharpAnalyzer
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
         }
 
-        FillBaeInfo(symbol, csType);
-        
+        FillBaseInfo(symbol, csType);
+
         csType.Comment = GetXmlSummaryComment(symbol);
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
@@ -208,8 +208,8 @@ public class CSharpAnalyzer
         var csType = new CSEnumType();
 
         FillNamespace(symbol, csType);
-        FillBaeInfo(symbol, csType);
-        
+        FillBaseInfo(symbol, csType);
+
         csType.Comment = GetXmlSummaryComment(symbol);
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
@@ -229,7 +229,7 @@ public class CSharpAnalyzer
     {
         var csType = new CSDelegate();
         FillNamespace(symbol, csType);
-        FillBaeInfo(symbol, csType);
+        FillBaseInfo(symbol, csType);
         csType.Comment = GetXmlSummaryComment(symbol);
         var invokeMethod = symbol.DelegateInvokeMethod;
         if (invokeMethod != null)
@@ -268,7 +268,7 @@ public class CSharpAnalyzer
         }
     }
 
-    private void FillBaeInfo(ISymbol symbol, CSTypeBase typeBase)
+    private void FillBaseInfo(ISymbol symbol, CSTypeBase typeBase)
     {
         typeBase.Name = symbol.Name;
 
@@ -288,7 +288,7 @@ public class CSharpAnalyzer
             }
         }
     }
-    
+
     private static string GetXmlSummaryComment(ISymbol symbol)
     {
         var comment = symbol.GetDocumentationCommentXml();
@@ -296,7 +296,7 @@ public class CSharpAnalyzer
         {
             return string.Empty;
         }
-        
+
         comment = comment.Replace('\r', ' ').Trim();
         if (!comment.StartsWith("<member") && !comment.StartsWith("<summary"))
         {
@@ -337,18 +337,18 @@ public class CSharpAnalyzer
         {
             return [];
         }
-        
+
         comment = comment.Replace('\r', ' ').Trim();
         if (!comment.StartsWith("<member") && !comment.StartsWith("<summary"))
         {
             return [];
         }
-    
+
         if (comment.StartsWith("<summary"))
         {
             comment = $"<parent>{comment}</parent>";
         }
-    
+
         var result = new Dictionary<string, string>();
         using (var xmlDoc = XmlReader.Create(new StringReader(comment)))
         {
@@ -365,7 +365,7 @@ public class CSharpAnalyzer
                             var summaryText = xmlDoc.Value.Trim();
                             result["<summary>"] = summaryText;
                         }
-    
+
                         break;
                     }
                     case "param":
@@ -377,7 +377,7 @@ public class CSharpAnalyzer
                             var paramValue = xmlDoc.Value.Trim();
                             result[paramName] = paramValue;
                         }
-    
+
                         break;
                     }
                     case "returns":
