@@ -8,7 +8,6 @@ public class CSharpDocGenerator(GenerateOptions o)
     public async Task<int> Run()
     {
         var slnPath = o.Solution;
-        var namespaces = o.Namespace.Split(';').ToList();
         var msbuildProperties = new Dictionary<string, string>();
         foreach (var property in o.Properties)
         {
@@ -45,7 +44,10 @@ public class CSharpDocGenerator(GenerateOptions o)
                     xLuaDumper.Dump(csTypes, o.Output);
                     break;
                 case LuaBindingType.ToLua:
-                    Console.WriteLine("Generating ToLua binding ...");
+                    Console.WriteLine("Generating ToLua binding ...\nCurrently ToLua is not supported.");
+                    break;
+                case LuaBindingType.Puerts:
+                    Console.WriteLine("Generating Puerts binding ...\nCurrently Puerts is not supported.");
                     break;
                 default:
                     Console.WriteLine("No binding type specified.");

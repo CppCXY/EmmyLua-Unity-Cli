@@ -1,5 +1,4 @@
-﻿using System.Text;
-using System.Xml;
+﻿using System.Xml;
 using Microsoft.CodeAnalysis;
 
 namespace EmmyLua.Unity.Generator;
@@ -58,6 +57,11 @@ public class CSharpAnalyzer
 
     private void AnalyzeTypeFields(ISymbol symbol, IHasFields classType)
     {
+        if (symbol.Name == "this[]")
+        {
+            return;
+        }
+        
         var field = new CSTypeField();
         FillBaeInfo(symbol, field);
         field.Comment = GetXmlSummaryComment(symbol);

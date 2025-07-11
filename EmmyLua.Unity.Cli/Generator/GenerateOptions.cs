@@ -14,8 +14,8 @@ public class GenerateOptions
     [Option('p', "properties", Required = false, HelpText = "The MSBuild properties.")]
     public IEnumerable<string> Properties { get; set; } = new List<string>();
     
-    // for xlua or tolua
-    [Option('b', "bind", Required = true, HelpText = "Generate XLua/ToLua binding.")]
+    // for xlua or tolua or puerts
+    [Option('b', "bind", Required = true, HelpText = "Generate XLua/ToLua/Puerts binding.")]
     public LuaBindingType BindingType { get; set; } = LuaBindingType.None;
     
     [Option('o', "output", Required = true, HelpText = "The output path.")]
@@ -30,6 +30,7 @@ public enum LuaBindingType
     None,
     XLua,
     ToLua,
+    Puerts
 }
 
 public enum LuaExportType
