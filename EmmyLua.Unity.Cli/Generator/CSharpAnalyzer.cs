@@ -1,5 +1,4 @@
-﻿using System.Xml;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 
 namespace EmmyLua.Unity.Generator;
 
@@ -18,19 +17,23 @@ public class CSharpAnalyzer
                 return;
             }
 
-            CSType csType = namedType switch
+            CSType? csType = namedType.TypeKind switch
             {
-                { TypeKind: TypeKind.Class or TypeKind.Struct } => AnalyzeClassType(namedType),
-                { TypeKind: TypeKind.Interface } => AnalyzeInterfaceType(namedType),
-                { TypeKind: TypeKind.Enum } => AnalyzeEnumType(namedType),
-                { TypeKind: TypeKind.Delegate } => AnalyzeDelegateType(namedType),
-                _ => new CSType()
+                TypeKind.Class or TypeKind.Struct => AnalyzeClassType(namedType),
+                TypeKind.Interface => AnalyzeInterfaceType(namedType),
+                TypeKind.Enum => AnalyzeEnumType(namedType),
+                TypeKind.Delegate => AnalyzeDelegateType(namedType),
+                _ => null
             };
-            CsTypes.Add(csType);
+            
+            if (csType != null)
+            {
+                CsTypes.Add(csType);
+            }
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine($"Error analyzing type '{namedType.Name}': {e.Message}");
         }
     }
 
@@ -62,17 +65,19 @@ public class CSharpAnalyzer
             return;
         }
 
-        var field = new CSTypeField();
-        FillBaseInfo(symbol, field);
-        field.Comment = GetXmlSummaryComment(symbol);
-        field.TypeName = symbol switch
+        var field = new CSTypeField
         {
-            IFieldSymbol fieldSymbol => fieldSymbol.Type.ToDisplayString(),
-            IPropertySymbol propertySymbol => propertySymbol.Type.ToDisplayString(),
-            IEventSymbol eventSymbol => eventSymbol.Type.ToDisplayString(),
-            _ => "any"
+            Comment = XmlDocumentationParser.GetSummary(symbol),
+            TypeName = symbol switch
+            {
+                IFieldSymbol fieldSymbol => fieldSymbol.Type.ToDisplayString(),
+                IPropertySymbol propertySymbol => propertySymbol.Type.ToDisplayString(),
+                IEventSymbol eventSymbol => eventSymbol.Type.ToDisplayString(),
+                _ => "any"
+            }
         };
-
+        
+        FillBaseInfo(symbol, field);
         classType.Fields.Add(field);
     }
 
@@ -83,15 +88,19 @@ public class CSharpAnalyzer
             return;
         }
 
-        var method = new CSTypeMethod();
+        var method = new CSTypeMethod
+        {
+            IsStatic = methodSymbol.IsStatic,
+            ReturnTypeName = methodSymbol.ReturnType.ToDisplayString()
+        };
+        
         FillBaseInfo(methodSymbol, method);
-        var xmlDictionary = GetXmlComment(methodSymbol);
+        
+        var xmlDictionary = XmlDocumentationParser.GetAllDocumentation(methodSymbol);
         if (xmlDictionary.TryGetValue("<summary>", out var summary))
         {
             method.Comment = summary;
         }
-        method.IsStatic = methodSymbol.IsStatic;
-        method.ReturnTypeName = methodSymbol.ReturnType.ToDisplayString();
         if (methodSymbol.IsExtensionMethod)
         {
             method.IsStatic = false;
@@ -136,18 +145,20 @@ public class CSharpAnalyzer
 
     private CSType AnalyzeClassType(INamedTypeSymbol symbol)
     {
-        var csType = new CSClassType();
+        var csType = new CSClassType
+        {
+            BaseClass = symbol.BaseType?.ToString() ?? "",
+            IsStatic = symbol.IsStatic,
+            Comment = XmlDocumentationParser.GetSummary(symbol)
+        };
+        
         FillNamespace(symbol, csType);
+        FillBaseInfo(symbol, csType);
 
         if (!symbol.AllInterfaces.IsEmpty)
         {
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
         }
-
-        csType.BaseClass = symbol.BaseType?.ToString() ?? "";
-
-        FillBaseInfo(symbol, csType);
-        csType.Comment = GetXmlSummaryComment(symbol);
 
         if (symbol is { TypeArguments.Length: > 0 })
         {
@@ -175,17 +186,18 @@ public class CSharpAnalyzer
 
     private CSType AnalyzeInterfaceType(INamedTypeSymbol symbol)
     {
-        var csType = new CSInterface();
+        var csType = new CSInterface
+        {
+            Comment = XmlDocumentationParser.GetSummary(symbol)
+        };
+        
         FillNamespace(symbol, csType);
+        FillBaseInfo(symbol, csType);
 
         if (!symbol.AllInterfaces.IsEmpty)
         {
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
         }
-
-        FillBaseInfo(symbol, csType);
-
-        csType.Comment = GetXmlSummaryComment(symbol);
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
         {
@@ -205,12 +217,13 @@ public class CSharpAnalyzer
 
     private CSType AnalyzeEnumType(INamedTypeSymbol symbol)
     {
-        var csType = new CSEnumType();
+        var csType = new CSEnumType
+        {
+            Comment = XmlDocumentationParser.GetSummary(symbol)
+        };
 
         FillNamespace(symbol, csType);
         FillBaseInfo(symbol, csType);
-
-        csType.Comment = GetXmlSummaryComment(symbol);
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
         {
@@ -227,10 +240,14 @@ public class CSharpAnalyzer
 
     private CSType AnalyzeDelegateType(INamedTypeSymbol symbol)
     {
-        var csType = new CSDelegate();
+        var csType = new CSDelegate
+        {
+            Comment = XmlDocumentationParser.GetSummary(symbol)
+        };
+        
         FillNamespace(symbol, csType);
         FillBaseInfo(symbol, csType);
-        csType.Comment = GetXmlSummaryComment(symbol);
+        
         var invokeMethod = symbol.DelegateInvokeMethod;
         if (invokeMethod != null)
         {
@@ -287,109 +304,5 @@ public class CSharpAnalyzer
                     $"{new Uri(location.SourceTree.FilePath)}#{lineSpan.Span.Start.Line}:{lineSpan.Span.Start.Character}";
             }
         }
-    }
-
-    private static string GetXmlSummaryComment(ISymbol symbol)
-    {
-        var comment = symbol.GetDocumentationCommentXml();
-        if (comment is null)
-        {
-            return string.Empty;
-        }
-
-        comment = comment.Replace('\r', ' ').Trim();
-        if (!comment.StartsWith("<member") && !comment.StartsWith("<summary"))
-        {
-            return "";
-        }
-
-        if (comment.StartsWith("<summary"))
-        {
-            comment = $"<parent>{comment}</parent>";
-        }
-
-        using var xmlDoc = XmlReader.Create(new StringReader(comment));
-        while (xmlDoc.Read())
-        {
-            if (!xmlDoc.IsStartElement()) continue;
-            switch (xmlDoc.Name)
-            {
-                case "summary" or "para":
-                {
-                    xmlDoc.Read();
-                    if (xmlDoc.NodeType == XmlNodeType.Text)
-                    {
-                        return xmlDoc.Value.Trim();
-                    }
-
-                    break;
-                }
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static Dictionary<string, string> GetXmlComment(ISymbol symbol)
-    {
-        var comment = symbol.GetDocumentationCommentXml();
-        if (comment is null)
-        {
-            return [];
-        }
-
-        comment = comment.Replace('\r', ' ').Trim();
-        if (!comment.StartsWith("<member") && !comment.StartsWith("<summary"))
-        {
-            return [];
-        }
-
-        if (comment.StartsWith("<summary"))
-        {
-            comment = $"<parent>{comment}</parent>";
-        }
-
-        var result = new Dictionary<string, string>();
-        using (var xmlDoc = XmlReader.Create(new StringReader(comment)))
-        {
-            while (xmlDoc.Read())
-            {
-                if (!xmlDoc.IsStartElement()) continue;
-                switch (xmlDoc.Name)
-                {
-                    case "summary" or "para":
-                    {
-                        xmlDoc.Read();
-                        if (xmlDoc.NodeType == XmlNodeType.Text)
-                        {
-                            var summaryText = xmlDoc.Value.Trim();
-                            result["<summary>"] = summaryText;
-                        }
-
-                        break;
-                    }
-                    case "param":
-                    {
-                        var paramName = xmlDoc.GetAttribute("name");
-                        xmlDoc.Read();
-                        if (xmlDoc.NodeType == XmlNodeType.Text && paramName is not null)
-                        {
-                            var paramValue = xmlDoc.Value.Trim();
-                            result[paramName] = paramValue;
-                        }
-
-                        break;
-                    }
-                    case "returns":
-                    {
-                        var returnInfo = xmlDoc.Value;
-                        result["<returns>"] = returnInfo;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return result;
     }
 }

@@ -7,59 +7,83 @@ public class CSharpDocGenerator(GenerateOptions o)
 {
     public async Task<int> Run()
     {
+        // Validate options
+        var validationErrors = o.Validate();
+        if (validationErrors.Count > 0)
+        {
+            Console.WriteLine("Configuration validation failed:");
+            foreach (var error in validationErrors)
+            {
+                Console.WriteLine($"  - {error}");
+            }
+            return 1;
+        }
+
         var slnPath = o.Solution;
         var msbuildProperties = new Dictionary<string, string>();
         foreach (var property in o.Properties)
         {
-            var s = property.Split('=');
-            if (s.Length >= 2)
+            var parts = property.Split('=', 2);
+            if (parts.Length == 2)
             {
-                msbuildProperties.Add(s[0], s[1]);
+                msbuildProperties.Add(parts[0].Trim(), parts[1].Trim());
             }
         }
 
         try
         {
-            Console.WriteLine($"Open solution {slnPath} ...");
+            Console.WriteLine($"Opening solution: {slnPath}");
             var compilations = await CSharpWorkspace.OpenSolutionAsync(slnPath, msbuildProperties);
             var analyzer = new CSharpAnalyzer();
-            Console.WriteLine("Analyzing ...");
-            foreach (var symbol in from compilation in compilations
-                     let finder = new CustomSymbolFinder()
-                     select CustomSymbolFinder.GetAllSymbols(compilation, o)
-                     into symbols
-                     from symbol in symbols.Where(
-                         symbol => symbol is { DeclaredAccessibility: Accessibility.Public })
-                     select symbol)
+            Console.WriteLine("Analyzing types...");
+            
+            var symbolCount = 0;
+            foreach (var compilation in compilations)
             {
-                analyzer.AnalyzeType(symbol);
+                var symbols = CustomSymbolFinder.GetAllSymbols(compilation, o);
+                var publicSymbols = symbols.Where(symbol => 
+                    symbol is { DeclaredAccessibility: Accessibility.Public }).ToList();
+                
+                Console.WriteLine($"  Found {publicSymbols.Count} public types in compilation '{compilation.AssemblyName}'");
+                
+                foreach (var symbol in publicSymbols)
+                {
+                    analyzer.AnalyzeType(symbol);
+                    symbolCount++;
+                }
             }
 
             var csTypes = analyzer.GetCsTypes();
+            Console.WriteLine($"Successfully analyzed {symbolCount} symbols, produced {csTypes.Count} type definitions.");
+
             switch (o.BindingType)
             {
                 case LuaBindingType.XLua:
-                    Console.WriteLine("Generating XLua binding ...");
+                    Console.WriteLine("Generating XLua bindings...");
                     var xLuaDumper = new XLuaDumper();
                     xLuaDumper.Dump(csTypes, o.Output);
                     break;
+                    
                 case LuaBindingType.ToLua:
-                    Console.WriteLine("Generating ToLua binding ...\nCurrently ToLua is not supported.");
-                    break;
+                    Console.WriteLine("ToLua binding generation is not yet implemented.");
+                    return 1;
+                    
                 case LuaBindingType.Puerts:
-                    Console.WriteLine("Generating Puerts binding ...\nCurrently Puerts is not supported.");
-                    break;
+                    Console.WriteLine("Puerts binding generation is not yet implemented.");
+                    return 1;
+                    
                 default:
-                    Console.WriteLine("No binding type specified.");
-                    break;
+                    Console.WriteLine("Error: No binding type specified.");
+                    return 1;
             }
             
-            Console.WriteLine("Done.");
+            Console.WriteLine("Generation completed successfully!");
             return 0;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Console.WriteLine($"Fatal error: {e.Message}");
+            Console.WriteLine($"Stack trace:\n{e.StackTrace}");
             return 1;
         }
     }
