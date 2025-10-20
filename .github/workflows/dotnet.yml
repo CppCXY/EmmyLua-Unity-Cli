@@ -20,9 +20,9 @@ jobs:
           - { os: macos-latest, target: osx-arm64, platform: darwin-arm64 }
           - { os: windows-latest, target: win-x64, platform: win32-x64}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     - name: Setup .NET
-      uses: actions/setup-dotnet@v2
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
@@ -30,7 +30,7 @@ jobs:
     - name: Build
       run: dotnet publish -r ${{ matrix.target }} -c Release -o ${{ github.workspace }}/artifact 
     - name: Upload
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with: 
         name: ${{ matrix.platform }}
         path: ${{ github.workspace }}/artifact/
