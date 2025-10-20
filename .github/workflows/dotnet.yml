@@ -40,34 +40,34 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - name: Download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v5
       - name: Display structure of downloaded files
         run: ls -R
       - name: zip win32-x64
-        uses: TheDoctor0/zip-release@v0.2.1
+        uses: TheDoctor0/zip-release@v0.7.6
         with:
           filename: win32-x64.zip
           path: win32-x64
       - name: zip linux-x64
-        uses: TheDoctor0/zip-release@v0.2.1
+        uses: TheDoctor0/zip-release@v0.7.6
         with: 
           filename: linux-x64.zip
           path: linux-x64
       - name: tar linux-64
         run: tar -czvf linux-x64.tar.gz linux-x64
       - name: zip darwin-x64
-        uses: TheDoctor0/zip-release@v0.2.1
+        uses: TheDoctor0/zip-release@v0.7.6
         with:
           filename: darwin-x64.zip
           path: darwin-x64
       - name: zip darwin-arm64
-        uses: TheDoctor0/zip-release@v0.2.1
+        uses: TheDoctor0/zip-release@v0.7.6
         with: 
           filename: darwin-arm64.zip
           path: darwin-arm64
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: EmmyLuaUnity
