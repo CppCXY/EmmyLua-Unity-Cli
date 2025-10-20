@@ -44,24 +44,24 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
       - name: zip win32-x64
-        uses: TheDoctor0/zip-release@v0.7.6
+        uses: TheDoctor0/zip-release@v0.2.1
         with:
           filename: win32-x64.zip
           path: win32-x64
       - name: zip linux-x64
-        uses: TheDoctor0/zip-release@v0.7.6
+        uses: TheDoctor0/zip-release@v0.2.1
         with: 
           filename: linux-x64.zip
           path: linux-x64
       - name: tar linux-64
         run: tar -czvf linux-x64.tar.gz linux-x64
       - name: zip darwin-x64
-        uses: TheDoctor0/zip-release@v0.7.6
+        uses: TheDoctor0/zip-release@v0.2.1
         with:
           filename: darwin-x64.zip
           path: darwin-x64
       - name: zip darwin-arm64
-        uses: TheDoctor0/zip-release@v0.7.6
+        uses: TheDoctor0/zip-release@v0.2.1
         with: 
           filename: darwin-arm64.zip
           path: darwin-arm64
