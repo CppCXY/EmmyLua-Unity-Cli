@@ -1,11 +1,11 @@
 using System.Text;
 
-namespace EmmyLua.Unity.Generator.XLua;
+namespace EmmyLua.Unity.Generator;
 
 /// <summary>
 /// Formatter for generating EmmyLua annotations for XLua bindings
 /// </summary>
-public class LuaAnnotationFormatter
+public static class LuaAnnotationFormatter
 {
     /// <summary>
     /// Write a comment and source location annotation
@@ -21,7 +21,7 @@ public class LuaAnnotationFormatter
         if (location.StartsWith("file://"))
         {
             var escapedLocation = location.Replace("\"", "'");
-            sb.AppendLine($"{{indentSpaces}}---@source \"{escapedLocation}\"");
+            sb.AppendLine($"{indentSpaces}---@source \"{escapedLocation}\"");
         }
     }
 
