@@ -33,9 +33,7 @@ public class ToLuaClassFinder
                 {
                     var variable = fieldDeclaration.Declaration.Variables.FirstOrDefault();
                     if (variable?.Identifier.Text == "customTypeList")
-                    {
                         toLuaBindMembers.AddRange(AnalyzeCustomTypeList(variable, semanticModel));
-                    }
                 }
             }
         }
@@ -50,14 +48,10 @@ public class ToLuaClassFinder
     {
         var types = new List<INamedTypeSymbol>();
 
-        if (variable.Initializer?.Value is not InitializerExpressionSyntax initializer)
-        {
-            return types;
-        }
+        if (variable.Initializer?.Value is not InitializerExpressionSyntax initializer) return types;
 
         // 遍历数组初始化器中的每个表达式
         foreach (var expression in initializer.Expressions)
-        {
             // 查找 _GT(typeof(...)) 调用
             if (expression is InvocationExpressionSyntax invocation)
             {
@@ -69,14 +63,10 @@ public class ToLuaClassFinder
                     if (argument?.Expression is TypeOfExpressionSyntax typeOfExpr)
                     {
                         var typeInfo = semanticModel.GetTypeInfo(typeOfExpr.Type);
-                        if (typeInfo.Type is INamedTypeSymbol namedType)
-                        {
-                            types.Add(namedType);
-                        }
+                        if (typeInfo.Type is INamedTypeSymbol namedType) types.Add(namedType);
                     }
                 }
             }
-        }
 
         return types;
     }

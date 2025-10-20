@@ -31,36 +31,20 @@ public class GenerateOptions
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(Solution))
-        {
             errors.Add("Solution path is required.");
-        }
         else if (!File.Exists(Solution))
-        {
             errors.Add($"Solution file not found: {Solution}");
-        }
         else if (!Solution.EndsWith(".sln", StringComparison.OrdinalIgnoreCase))
-        {
             errors.Add("Solution path must point to a .sln file.");
-        }
 
-        if (string.IsNullOrWhiteSpace(Output))
-        {
-            errors.Add("Output path is required.");
-        }
+        if (string.IsNullOrWhiteSpace(Output)) errors.Add("Output path is required.");
 
-        if (BindingType == LuaBindingType.None)
-        {
-            errors.Add("Binding type must be specified.");
-        }
+        if (BindingType == LuaBindingType.None) errors.Add("Binding type must be specified.");
 
         // Validate properties format
         foreach (var property in Properties)
-        {
             if (!property.Contains('='))
-            {
                 errors.Add($"Invalid property format: {property}. Expected format: key=value");
-            }
-        }
 
         return errors;
     }

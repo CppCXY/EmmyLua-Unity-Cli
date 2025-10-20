@@ -5,7 +5,8 @@ namespace EmmyLua.Unity.Generator;
 
 public static class CSharpWorkspace
 {
-    public static async Task<List<Compilation>> OpenSolutionAsync(string path, Dictionary<string, string> msbuildProperties)
+    public static async Task<List<Compilation>> OpenSolutionAsync(string path,
+        Dictionary<string, string> msbuildProperties)
     {
         var workspace = MSBuildWorkspace.Create(msbuildProperties);
         var solution = await workspace.OpenSolutionAsync(path);
@@ -16,7 +17,7 @@ public static class CSharpWorkspace
             var compilation = await project.GetCompilationAsync(CancellationToken.None);
             if (compilation != null) projectCompilationList.Add(compilation);
         }
-  
+
         return projectCompilationList;
     }
 }

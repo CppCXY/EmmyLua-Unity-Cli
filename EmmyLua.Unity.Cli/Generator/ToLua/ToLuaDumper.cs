@@ -21,16 +21,12 @@ public class ToLuaDumper : IDumper
     {
         try
         {
-            if (!Directory.Exists(outPath))
-            {
-                Directory.CreateDirectory(outPath);
-            }
+            if (!Directory.Exists(outPath)) Directory.CreateDirectory(outPath);
 
             var sb = new StringBuilder();
             ResetSb(sb);
 
             foreach (var csType in csTypes)
-            {
                 try
                 {
                     switch (csType)
@@ -56,12 +52,8 @@ public class ToLuaDumper : IDumper
                 {
                     Console.WriteLine($"Error dumping type '{csType.Name}': {e.Message}");
                 }
-            }
 
-            if (sb.Length > 0)
-            {
-                CacheOrDumpToFile(sb, outPath, true);
-            }
+            if (sb.Length > 0) CacheOrDumpToFile(sb, outPath, true);
 
             DumpNamespace(sb, outPath);
 
@@ -80,7 +72,7 @@ public class ToLuaDumper : IDumper
         sb.AppendLine("---@meta");
         sb.AppendLine();
         sb.AppendLine("---ToLua global namespace");
-        
+
         foreach (var (namespaceString, isNamespace) in NamespaceDict)
         {
             if (isNamespace)
@@ -93,6 +85,7 @@ public class ToLuaDumper : IDumper
                 sb.AppendLine($"---@type {namespaceString}");
                 sb.AppendLine($"{namespaceString} = {{}}");
             }
+
             sb.AppendLine();
         }
 
@@ -103,7 +96,6 @@ public class ToLuaDumper : IDumper
     private void CacheOrDumpToFile(StringBuilder sb, string outPath, bool force = false)
     {
         if (sb.Length > SingleFileLength || force)
-        {
             try
             {
                 var filePath = Path.Combine(outPath, $"tolua_dump_{Count}.lua");
@@ -116,7 +108,6 @@ public class ToLuaDumper : IDumper
                 Console.WriteLine($"Error writing file: {e.Message}");
                 throw;
             }
-        }
     }
 
     private void ResetSb(StringBuilder sb)
@@ -141,16 +132,10 @@ public class ToLuaDumper : IDumper
         {
             var ctors = GetCtorList(csClassType);
             if (ctors.Count > 0)
-            {
                 foreach (var ctor in ctors)
-                {
                     LuaAnnotationFormatter.WriteConstructorOverload(sb, ctor, classFullName);
-                }
-            }
             else
-            {
                 sb.AppendLine($"---@overload fun(): {classFullName}");
-            }
 
             // ToLua 常用 .New() 方法创建对象
             sb.AppendLine($"---Create a new instance of {classFullName}");
@@ -189,10 +174,7 @@ public class ToLuaDumper : IDumper
         if (!string.IsNullOrEmpty(namespaceName))
         {
             var firstNamespace = namespaceName.Split('.').FirstOrDefault();
-            if (firstNamespace != null)
-            {
-                NamespaceDict.TryAdd(firstNamespace, true);
-            }
+            if (firstNamespace != null) NamespaceDict.TryAdd(firstNamespace, true);
         }
         else
         {
@@ -210,22 +192,22 @@ public class ToLuaDumper : IDumper
     private void HandleCsInterface(CSInterface csInterface, StringBuilder sb)
     {
         RegisterNamespace(csInterface.Namespace, csInterface.Name);
-        
+
         var interfaceFullName = GetFullTypeName(csInterface.Namespace, csInterface.Name);
-        
+
         LuaAnnotationFormatter.WriteCommentAndLocation(sb, csInterface.Comment, csInterface.Location);
         LuaAnnotationFormatter.WriteTypeAnnotation(sb, "class", interfaceFullName, "", csInterface.Interfaces);
-        
+
         sb.AppendLine($"{csInterface.Name} = {{}}");
         sb.AppendLine();
-        
+
         // Write interface members
         foreach (var field in csInterface.Fields)
         {
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location);
             LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csInterface.Name, field.Name);
         }
-        
+
         foreach (var method in csInterface.Methods)
         {
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, method.Comment, method.Location);
@@ -242,36 +224,34 @@ public class ToLuaDumper : IDumper
         var enumFullName = GetFullTypeName(csEnumType.Namespace, csEnumType.Name);
 
         LuaAnnotationFormatter.WriteCommentAndLocation(sb, csEnumType.Comment, csEnumType.Location);
-        
+
         // ToLua 枚举定义
         sb.AppendLine($"---@class {enumFullName}");
-        
+
         foreach (var field in csEnumType.Fields)
         {
             var luaTypeName = LuaTypeConverter.ConvertToLuaTypeName(field.TypeName);
             sb.AppendLine($"---@field public {field.Name} {luaTypeName}");
         }
-        
+
         sb.AppendLine($"{csEnumType.Name} = {{}}");
         sb.AppendLine();
 
         var counter = 0;
         foreach (var field in csEnumType.Fields)
         {
-            if (!string.IsNullOrEmpty(field.Comment))
-            {
-                sb.AppendLine($"---{field.Comment}");
-            }
+            if (!string.IsNullOrEmpty(field.Comment)) sb.AppendLine($"---{field.Comment}");
             sb.AppendLine($"{csEnumType.Name}.{field.Name} = {counter}");
             counter++;
         }
+
         sb.AppendLine();
     }
 
     private void HandleCsDelegate(CSDelegate csDelegate, StringBuilder sb)
     {
         RegisterNamespace(csDelegate.Namespace, csDelegate.Name);
-        
+
         LuaAnnotationFormatter.WriteCommentAndLocation(sb, csDelegate.Comment, csDelegate.Location);
         LuaAnnotationFormatter.WriteDelegateAlias(sb, csDelegate.Name, csDelegate.InvokeMethod);
     }

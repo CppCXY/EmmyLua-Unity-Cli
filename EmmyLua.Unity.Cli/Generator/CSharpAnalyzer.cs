@@ -12,12 +12,9 @@ public class CSharpAnalyzer
     {
         try
         {
-            if (namedType.IsNamespace)
-            {
-                return;
-            }
+            if (namedType.IsNamespace) return;
 
-            CSType? csType = namedType.TypeKind switch
+            var csType = namedType.TypeKind switch
             {
                 TypeKind.Class or TypeKind.Struct => AnalyzeClassType(namedType),
                 TypeKind.Interface => AnalyzeInterfaceType(namedType),
@@ -25,11 +22,8 @@ public class CSharpAnalyzer
                 TypeKind.Delegate => AnalyzeDelegateType(namedType),
                 _ => null
             };
-            
-            if (csType != null)
-            {
-                CsTypes.Add(csType);
-            }
+
+            if (csType != null) CsTypes.Add(csType);
         }
         catch (Exception e)
         {
@@ -42,15 +36,9 @@ public class CSharpAnalyzer
         if (ExtendMethods.Count != 0)
         {
             foreach (var csType in CsTypes)
-            {
                 if (ExtendMethods.TryGetValue(csType.Name, out var methods))
-                {
                     if (csType is IHasMethods hasMethods)
-                    {
                         hasMethods.Methods.AddRange(methods);
-                    }
-                }
-            }
 
             ExtendMethods.Clear();
         }
@@ -60,9 +48,21 @@ public class CSharpAnalyzer
 
     private void AnalyzeTypeFields(ISymbol symbol, IHasFields classType)
     {
-        if (symbol.Name == "this[]")
+        // 跳过索引器 - 索引器需要特殊处理，暂时不支持
+        if (symbol.Name == "this[]") return;
+
+        // 对于属性，检查 getter/setter 的可访问性
+        if (symbol is IPropertySymbol propertySymbol)
         {
-            return;
+            // 如果是索引器，跳过
+            if (propertySymbol.IsIndexer) return;
+
+            // 检查属性的可访问性
+            // 如果 getter 和 setter 都不是 public，跳过此属性
+            var getterAccessibility = propertySymbol.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable;
+            var setterAccessibility = propertySymbol.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable;
+
+            if (getterAccessibility != Accessibility.Public && setterAccessibility != Accessibility.Public) return;
         }
 
         var field = new CSTypeField
@@ -71,36 +71,30 @@ public class CSharpAnalyzer
             TypeName = symbol switch
             {
                 IFieldSymbol fieldSymbol => fieldSymbol.Type.ToDisplayString(),
-                IPropertySymbol propertySymbol => propertySymbol.Type.ToDisplayString(),
+                IPropertySymbol propSymbol => propSymbol.Type.ToDisplayString(),
                 IEventSymbol eventSymbol => eventSymbol.Type.ToDisplayString(),
                 _ => "any"
             }
         };
-        
+
         FillBaseInfo(symbol, field);
         classType.Fields.Add(field);
     }
 
     private void AnalyzeTypeMethods(IMethodSymbol methodSymbol, IHasMethods csClassType)
     {
-        if (methodSymbol.Name.StartsWith("get_") || methodSymbol.Name.StartsWith("set_"))
-        {
-            return;
-        }
+        if (methodSymbol.Name.StartsWith("get_") || methodSymbol.Name.StartsWith("set_")) return;
 
         var method = new CSTypeMethod
         {
             IsStatic = methodSymbol.IsStatic,
             ReturnTypeName = methodSymbol.ReturnType.ToDisplayString()
         };
-        
+
         FillBaseInfo(methodSymbol, method);
-        
+
         var xmlDictionary = XmlDocumentationParser.GetAllDocumentation(methodSymbol);
-        if (xmlDictionary.TryGetValue("<summary>", out var summary))
-        {
-            method.Comment = summary;
-        }
+        if (xmlDictionary.TryGetValue("<summary>", out var summary)) method.Comment = summary;
         if (methodSymbol.IsExtensionMethod)
         {
             method.IsStatic = false;
@@ -110,7 +104,7 @@ public class CSharpAnalyzer
             if (thisType is not INamedTypeSymbol namedTypeSymbol) return;
             method.Params = methodSymbol.Parameters
                 .Skip(1)
-                .Select(it => new CSParam()
+                .Select(it => new CSParam
                 {
                     Name = it.Name,
                     Nullable = it.IsOptional,
@@ -120,18 +114,14 @@ public class CSharpAnalyzer
                 }).ToList();
 
             if (ExtendMethods.TryGetValue(namedTypeSymbol.Name, out var extendMethod))
-            {
                 extendMethod.Add(method);
-            }
             else
-            {
                 ExtendMethods.Add(namedTypeSymbol.Name, [method]);
-            }
         }
         else
         {
             method.Params = methodSymbol.Parameters
-                .Select(it => new CSParam()
+                .Select(it => new CSParam
                 {
                     Name = it.Name,
                     Nullable = it.IsOptional,
@@ -151,22 +141,17 @@ public class CSharpAnalyzer
             IsStatic = symbol.IsStatic,
             Comment = XmlDocumentationParser.GetSummary(symbol)
         };
-        
+
         FillNamespace(symbol, csType);
         FillBaseInfo(symbol, csType);
 
         if (!symbol.AllInterfaces.IsEmpty)
-        {
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
-        }
 
         if (symbol is { TypeArguments.Length: > 0 })
-        {
             csType.GenericTypes = symbol.TypeArguments.Select(it => it.ToDisplayString()).ToList();
-        }
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
-        {
             switch (member)
             {
                 case IFieldSymbol fieldSymbol:
@@ -178,8 +163,10 @@ public class CSharpAnalyzer
                 case IPropertySymbol propertySymbol:
                     AnalyzeTypeFields(propertySymbol, csType);
                     break;
+                case IEventSymbol eventSymbol:
+                    AnalyzeTypeFields(eventSymbol, csType);
+                    break;
             }
-        }
 
         return csType;
     }
@@ -190,17 +177,14 @@ public class CSharpAnalyzer
         {
             Comment = XmlDocumentationParser.GetSummary(symbol)
         };
-        
+
         FillNamespace(symbol, csType);
         FillBaseInfo(symbol, csType);
 
         if (!symbol.AllInterfaces.IsEmpty)
-        {
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
-        }
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
-        {
             switch (member)
             {
                 case IFieldSymbol fieldSymbol:
@@ -209,8 +193,13 @@ public class CSharpAnalyzer
                 case IMethodSymbol methodSymbol:
                     AnalyzeTypeMethods(methodSymbol, csType);
                     break;
+                case IPropertySymbol propertySymbol:
+                    AnalyzeTypeFields(propertySymbol, csType);
+                    break;
+                case IEventSymbol eventSymbol:
+                    AnalyzeTypeFields(eventSymbol, csType);
+                    break;
             }
-        }
 
         return csType;
     }
@@ -226,14 +215,12 @@ public class CSharpAnalyzer
         FillBaseInfo(symbol, csType);
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
-        {
             switch (member)
             {
                 case IFieldSymbol fieldSymbol:
                     AnalyzeTypeFields(fieldSymbol, csType);
                     break;
             }
-        }
 
         return csType;
     }
@@ -244,17 +231,17 @@ public class CSharpAnalyzer
         {
             Comment = XmlDocumentationParser.GetSummary(symbol)
         };
-        
+
         FillNamespace(symbol, csType);
         FillBaseInfo(symbol, csType);
-        
+
         var invokeMethod = symbol.DelegateInvokeMethod;
         if (invokeMethod != null)
         {
             var method = new CSTypeMethod();
             method.ReturnTypeName = invokeMethod.ReturnType.ToDisplayString();
             method.Params = invokeMethod.Parameters
-                .Select(it => new CSParam()
+                .Select(it => new CSParam
                 {
                     Name = it.Name,
                     Nullable = it.IsOptional,

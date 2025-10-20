@@ -13,10 +13,7 @@ public static class LuaAnnotationFormatter
     public static void WriteCommentAndLocation(StringBuilder sb, string comment, string location, int indent = 0)
     {
         var indentSpaces = new string(' ', indent);
-        if (!string.IsNullOrEmpty(comment))
-        {
-            sb.AppendLine($"{indentSpaces}---{comment.Replace("\n", "\n---")}");
-        }
+        if (!string.IsNullOrEmpty(comment)) sb.AppendLine($"{indentSpaces}---{comment.Replace("\n", "\n---")}");
 
         if (location.StartsWith("file://"))
         {
@@ -42,19 +39,13 @@ public static class LuaAnnotationFormatter
         sb.Append($"---@{tag} {fullName}");
 
         // Add generic type parameters
-        if (genericTypes.Count > 0)
-        {
-            sb.Append($"<{string.Join(", ", genericTypes)}>");
-        }
+        if (genericTypes.Count > 0) sb.Append($"<{string.Join(", ", genericTypes)}>");
 
         // Add inheritance
         if (!string.IsNullOrEmpty(baseClass))
         {
             sb.Append($": {baseClass}");
-            foreach (var csInterface in interfaces)
-            {
-                sb.Append($", {csInterface}");
-            }
+            foreach (var csInterface in interfaces) sb.Append($", {csInterface}");
         }
         else if (interfaces.Count > 0)
         {
@@ -85,9 +76,7 @@ public static class LuaAnnotationFormatter
         foreach (var param in parameters)
         {
             if (param.Kind is Microsoft.CodeAnalysis.RefKind.Out or Microsoft.CodeAnalysis.RefKind.Ref)
-            {
                 outParams.Add(param);
-            }
 
             // Don't write annotation for out parameters (they're only in return type)
             if (param.Kind != Microsoft.CodeAnalysis.RefKind.Out)

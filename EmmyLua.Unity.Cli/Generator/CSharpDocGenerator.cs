@@ -13,10 +13,7 @@ public class CSharpDocGenerator(GenerateOptions o)
         if (validationErrors.Count > 0)
         {
             Console.WriteLine("Configuration validation failed:");
-            foreach (var error in validationErrors)
-            {
-                Console.WriteLine($"  - {error}");
-            }
+            foreach (var error in validationErrors) Console.WriteLine($"  - {error}");
             return 1;
         }
 
@@ -25,10 +22,7 @@ public class CSharpDocGenerator(GenerateOptions o)
         foreach (var property in o.Properties)
         {
             var parts = property.Split('=', 2);
-            if (parts.Length == 2)
-            {
-                msbuildProperties.Add(parts[0].Trim(), parts[1].Trim());
-            }
+            if (parts.Length == 2) msbuildProperties.Add(parts[0].Trim(), parts[1].Trim());
         }
 
         try
@@ -37,16 +31,17 @@ public class CSharpDocGenerator(GenerateOptions o)
             var compilations = await CSharpWorkspace.OpenSolutionAsync(slnPath, msbuildProperties);
             var analyzer = new CSharpAnalyzer();
             Console.WriteLine("Analyzing types...");
-            
+
             var symbolCount = 0;
             foreach (var compilation in compilations)
             {
                 var symbols = CustomSymbolFinder.GetAllSymbols(compilation, o);
-                var publicSymbols = symbols.Where(symbol => 
+                var publicSymbols = symbols.Where(symbol =>
                     symbol is { DeclaredAccessibility: Accessibility.Public }).ToList();
-                
-                Console.WriteLine($"  Found {publicSymbols.Count} public types in compilation '{compilation.AssemblyName}'");
-                
+
+                Console.WriteLine(
+                    $"  Found {publicSymbols.Count} public types in compilation '{compilation.AssemblyName}'");
+
                 foreach (var symbol in publicSymbols)
                 {
                     analyzer.AnalyzeType(symbol);
@@ -55,7 +50,8 @@ public class CSharpDocGenerator(GenerateOptions o)
             }
 
             var csTypes = analyzer.GetCsTypes();
-            Console.WriteLine($"Successfully analyzed {symbolCount} symbols, produced {csTypes.Count} type definitions.");
+            Console.WriteLine(
+                $"Successfully analyzed {symbolCount} symbols, produced {csTypes.Count} type definitions.");
 
             switch (o.BindingType)
             {
@@ -64,22 +60,22 @@ public class CSharpDocGenerator(GenerateOptions o)
                     var xLuaDumper = new XLuaDumper();
                     xLuaDumper.Dump(csTypes, o.Output);
                     break;
-                    
+
                 case LuaBindingType.ToLua:
                     Console.WriteLine("Generating ToLua bindings...");
                     var toLuaDumper = new ToLuaDumper();
                     toLuaDumper.Dump(csTypes, o.Output);
                     break;
-                    
+
                 case LuaBindingType.Puerts:
                     Console.WriteLine("Puerts binding generation is not yet implemented.");
                     return 1;
-                    
+
                 default:
                     Console.WriteLine("Error: No binding type specified.");
                     return 1;
             }
-            
+
             Console.WriteLine("Generation completed successfully!");
             return 0;
         }

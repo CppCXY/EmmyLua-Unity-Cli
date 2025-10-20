@@ -32,23 +32,23 @@ public static class LuaTypeConverter
         { "uint", "integer" },
         { "ulong", "integer" },
         { "ushort", "integer" },
-        
+
         { "System.Single", "number" },
         { "System.Double", "number" },
         { "System.Decimal", "number" },
         { "float", "number" },
         { "double", "number" },
         { "decimal", "number" },
-        
+
         { "System.Boolean", "boolean" },
         { "bool", "boolean" },
-        
+
         { "System.String", "string" },
         { "string", "string" },
-        
+
         { "System.Object", "any" },
         { "object", "any" },
-        
+
         { "System.Void", "void" },
         { "void", "void" }
     };
@@ -60,7 +60,7 @@ public static class LuaTypeConverter
     {
         if (string.IsNullOrEmpty(name))
             return name;
-            
+
         return LuaKeywords.Contains(name) ? "_" + name : name;
     }
 
@@ -85,10 +85,7 @@ public static class LuaTypeConverter
             return luaType;
 
         // Handle generic types
-        if (typeName.Contains('<'))
-        {
-            return ConvertGenericType(typeName);
-        }
+        if (typeName.Contains('<')) return ConvertGenericType(typeName);
 
         // Return original type name for custom types
         return typeName;
@@ -106,10 +103,7 @@ public static class LuaTypeConverter
             return $"{ConvertToLuaTypeName(innerType)}[]";
         }
 
-        if (typeName.StartsWith("System.Collections.Generic.Dictionary<"))
-        {
-            return "table";
-        }
+        if (typeName.StartsWith("System.Collections.Generic.Dictionary<")) return "table";
 
         return typeName;
     }
@@ -121,10 +115,7 @@ public static class LuaTypeConverter
     {
         var start = genericType.IndexOf('<');
         var end = genericType.LastIndexOf('>');
-        if (start >= 0 && end > start)
-        {
-            return genericType.Substring(start + 1, end - start - 1).Trim();
-        }
+        if (start >= 0 && end > start) return genericType.Substring(start + 1, end - start - 1).Trim();
         return "any";
     }
 }

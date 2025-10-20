@@ -28,10 +28,7 @@ public static class XmlDocumentationParser
                 if (xmlDoc.Name is "summary" or "para")
                 {
                     xmlDoc.Read();
-                    if (xmlDoc.NodeType == XmlNodeType.Text)
-                    {
-                        return xmlDoc.Value.Trim();
-                    }
+                    if (xmlDoc.NodeType == XmlNodeType.Text) return xmlDoc.Value.Trim();
                 }
             }
         }
@@ -50,7 +47,7 @@ public static class XmlDocumentationParser
     {
         var result = new Dictionary<string, string>();
         var comment = GetDocumentationXml(symbol);
-        
+
         if (string.IsNullOrEmpty(comment))
             return result;
 
@@ -66,27 +63,19 @@ public static class XmlDocumentationParser
                 {
                     case "summary" or "para":
                         xmlDoc.Read();
-                        if (xmlDoc.NodeType == XmlNodeType.Text)
-                        {
-                            result["<summary>"] = xmlDoc.Value.Trim();
-                        }
+                        if (xmlDoc.NodeType == XmlNodeType.Text) result["<summary>"] = xmlDoc.Value.Trim();
                         break;
 
                     case "param":
                         var paramName = xmlDoc.GetAttribute("name");
                         xmlDoc.Read();
                         if (xmlDoc.NodeType == XmlNodeType.Text && !string.IsNullOrEmpty(paramName))
-                        {
                             result[paramName] = xmlDoc.Value.Trim();
-                        }
                         break;
 
                     case "returns":
                         xmlDoc.Read();
-                        if (xmlDoc.NodeType == XmlNodeType.Text)
-                        {
-                            result["<returns>"] = xmlDoc.Value.Trim();
-                        }
+                        if (xmlDoc.NodeType == XmlNodeType.Text) result["<returns>"] = xmlDoc.Value.Trim();
                         break;
                 }
             }
@@ -109,16 +98,13 @@ public static class XmlDocumentationParser
             return string.Empty;
 
         comment = comment.Replace('\r', ' ').Trim();
-        
+
         // Validate that it's valid XML
         if (!comment.StartsWith("<member") && !comment.StartsWith("<summary"))
             return string.Empty;
 
         // Wrap summary tags in a parent element for proper XML parsing
-        if (comment.StartsWith("<summary"))
-        {
-            comment = $"<parent>{comment}</parent>";
-        }
+        if (comment.StartsWith("<summary")) comment = $"<parent>{comment}</parent>";
 
         return comment;
     }

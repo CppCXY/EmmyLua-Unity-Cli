@@ -28,10 +28,7 @@ public class XLuaClassFinder
             foreach (var typeDeclaration in typeDeclarationSyntaxes)
             {
                 var typeSymbol = semanticModel.GetDeclaredSymbol(typeDeclaration) as INamedTypeSymbol;
-                if (typeSymbol != null && HasLuaCallCSharpAttribute(typeSymbol))
-                {
-                    luaCallCSharpMembers.Add(typeSymbol);
-                }
+                if (typeSymbol != null && HasLuaCallCSharpAttribute(typeSymbol)) luaCallCSharpMembers.Add(typeSymbol);
             }
 
             // 方式2 & 3: 查找静态类中标记 [LuaCallCSharp] 的字段和属性
@@ -43,17 +40,13 @@ public class XLuaClassFinder
 
                 // 查找标记的字段和属性
                 foreach (var member in classSymbol.GetMembers())
-                {
-                    if (member is IFieldSymbol fieldSymbol && 
-                        fieldSymbol.IsStatic && 
+                    if (member is IFieldSymbol fieldSymbol &&
+                        fieldSymbol.IsStatic &&
                         HasLuaCallCSharpAttribute(fieldSymbol) &&
                         IsEnumerableOfType(fieldSymbol.Type))
                     {
                         var types = AnalyzeMemberForTypes(fieldSymbol, semanticModel);
-                        foreach (var type in types)
-                        {
-                            luaCallCSharpMembers.Add(type);
-                        }
+                        foreach (var type in types) luaCallCSharpMembers.Add(type);
                     }
                     else if (member is IPropertySymbol propertySymbol &&
                              propertySymbol.IsStatic &&
@@ -61,12 +54,8 @@ public class XLuaClassFinder
                              IsEnumerableOfType(propertySymbol.Type))
                     {
                         var types = AnalyzeMemberForTypes(propertySymbol, semanticModel);
-                        foreach (var type in types)
-                        {
-                            luaCallCSharpMembers.Add(type);
-                        }
+                        foreach (var type in types) luaCallCSharpMembers.Add(type);
                     }
-                }
             }
         }
 
@@ -113,13 +102,10 @@ public class XLuaClassFinder
             if (syntax is VariableDeclaratorSyntax variableDeclarator)
             {
                 if (variableDeclarator.Initializer?.Value is ObjectCreationExpressionSyntax objectCreation)
-                {
                     result.AddRange(ExtractTypesFromInitializer(objectCreation, semanticModel));
-                }
-                else if (variableDeclarator.Initializer?.Value is ImplicitObjectCreationExpressionSyntax implicitCreation)
-                {
+                else if (variableDeclarator.Initializer?.Value is ImplicitObjectCreationExpressionSyntax
+                         implicitCreation)
                     result.AddRange(ExtractTypesFromInitializer(implicitCreation, semanticModel));
-                }
             }
             // 分析属性初始化器
             else if (syntax is PropertyDeclarationSyntax propertyDeclaration)
@@ -132,15 +118,12 @@ public class XLuaClassFinder
                 {
                     var returnStatements = getter.Body.DescendantNodes().OfType<ReturnStatementSyntax>();
                     foreach (var returnStatement in returnStatements)
-                    {
                         if (returnStatement.Expression is ObjectCreationExpressionSyntax objectCreation)
-                        {
                             result.AddRange(ExtractTypesFromInitializer(objectCreation, semanticModel));
-                        }
-                    }
                 }
                 // 也支持表达式主体: public static List<Type> Types => new List<Type> { ... };
-                else if (propertyDeclaration.ExpressionBody?.Expression is ObjectCreationExpressionSyntax exprBodyCreation)
+                else if (propertyDeclaration.ExpressionBody?.Expression is ObjectCreationExpressionSyntax
+                         exprBodyCreation)
                 {
                     result.AddRange(ExtractTypesFromInitializer(exprBodyCreation, semanticModel));
                 }
@@ -153,7 +136,8 @@ public class XLuaClassFinder
     /// <summary>
     /// 从对象创建表达式中提取类型（支持集合初始化器）
     /// </summary>
-    private List<INamedTypeSymbol> ExtractTypesFromInitializer(SyntaxNode creationExpression, SemanticModel semanticModel)
+    private List<INamedTypeSymbol> ExtractTypesFromInitializer(SyntaxNode creationExpression,
+        SemanticModel semanticModel)
     {
         var result = new List<INamedTypeSymbol>();
 
@@ -162,10 +146,7 @@ public class XLuaClassFinder
         foreach (var typeofExpr in typeofExpressions)
         {
             var typeInfo = semanticModel.GetTypeInfo(typeofExpr.Type);
-            if (typeInfo.Type is INamedTypeSymbol namedType)
-            {
-                result.Add(namedType);
-            }
+            if (typeInfo.Type is INamedTypeSymbol namedType) result.Add(namedType);
         }
 
         return result;
