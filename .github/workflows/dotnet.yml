@@ -30,7 +30,7 @@ jobs:
     - name: Build
       run: dotnet publish -r ${{ matrix.target }} -c Release -o ${{ github.workspace }}/artifact 
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with: 
         name: ${{ matrix.platform }}
         path: ${{ github.workspace }}/artifact/
