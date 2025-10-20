@@ -1,4 +1,5 @@
 using EmmyLua.Unity.Generator.XLua;
+using EmmyLua.Unity.Generator.ToLua;
 using Microsoft.CodeAnalysis;
 
 namespace EmmyLua.Unity.Generator;
@@ -65,8 +66,10 @@ public class CSharpDocGenerator(GenerateOptions o)
                     break;
                     
                 case LuaBindingType.ToLua:
-                    Console.WriteLine("ToLua binding generation is not yet implemented.");
-                    return 1;
+                    Console.WriteLine("Generating ToLua bindings...");
+                    var toLuaDumper = new ToLuaDumper();
+                    toLuaDumper.Dump(csTypes, o.Output);
+                    break;
                     
                 case LuaBindingType.Puerts:
                     Console.WriteLine("Puerts binding generation is not yet implemented.");
