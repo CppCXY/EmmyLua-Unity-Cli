@@ -13,6 +13,9 @@ public class XLuaDumper : IDumper
     private int Count { get; set; } = 0;
 
     private Dictionary<string, bool> NamespaceDict { get; } = new();
+    
+    // 类型引用追踪器
+    private TypeReferenceTracker TypeTracker { get; } = new();
 
     public void Dump(List<CSType> csTypes, string outPath)
     {
@@ -20,9 +23,13 @@ public class XLuaDumper : IDumper
         {
             if (!Directory.Exists(outPath)) Directory.CreateDirectory(outPath);
 
+            // 第一遍：收集所有已导出的类型
+            TypeTracker.CollectExportedTypes(csTypes);
+
             var sb = new StringBuilder();
             ResetSb(sb);
 
+            // 第二遍：导出类型并收集未导出的引用类型
             foreach (var csType in csTypes)
                 try
                 {
@@ -53,8 +60,10 @@ public class XLuaDumper : IDumper
             if (sb.Length > 0) CacheOrDumpToFile(sb, outPath, true);
 
             DumpNamespace(sb, outPath);
+            TypeTracker.DumpUnexportedTypes(outPath, "xlua_noexport_types.lua");
 
             Console.WriteLine($"Successfully generated {Count} Lua definition files.");
+            Console.WriteLine($"Found {TypeTracker.GetUnexportedTypeCount()} unexported types referenced in exported types.");
         }
         catch (Exception e)
         {
@@ -105,6 +114,13 @@ public class XLuaDumper : IDumper
 
         var classFullName = GetFullTypeName(csClassType.Namespace, csClassType.Name);
 
+        // 检查基类和接口
+        TypeTracker.CheckAndRecordType(csClassType.BaseClass);
+        foreach (var iface in csClassType.Interfaces)
+        {
+            TypeTracker.CheckAndRecordType(iface);
+        }
+
         LuaAnnotationFormatter.WriteCommentAndLocation(sb, csClassType.Comment, csClassType.Location);
         LuaAnnotationFormatter.WriteTypeAnnotation(
             sb, "class", classFullName, csClassType.BaseClass, csClassType.Interfaces, csClassType.GenericTypes);
@@ -115,7 +131,14 @@ public class XLuaDumper : IDumper
             var ctors = GetCtorList(csClassType);
             if (ctors.Count > 0)
                 foreach (var ctor in ctors)
+                {
+                    // 检查构造函数参数类型
+                    foreach (var param in ctor.Params)
+                    {
+                        TypeTracker.CheckAndRecordType(param.TypeName);
+                    }
                     LuaAnnotationFormatter.WriteConstructorOverload(sb, ctor, classFullName);
+                }
             else
                 sb.AppendLine($"---@overload fun(): {classFullName}");
         }
@@ -125,6 +148,9 @@ public class XLuaDumper : IDumper
         // Write fields
         foreach (var field in csClassType.Fields)
         {
+            // 检查字段类型
+            TypeTracker.CheckAndRecordType(field.TypeName);
+            
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location);
             LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
         }
@@ -134,6 +160,15 @@ public class XLuaDumper : IDumper
         {
             if (method.Name == ".ctor")
                 continue;
+
+            // 检查返回类型
+            TypeTracker.CheckAndRecordType(method.ReturnTypeName);
+            
+            // 检查参数类型
+            foreach (var param in method.Params)
+            {
+                TypeTracker.CheckAndRecordType(param.TypeName);
+            }
 
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, method.Comment, method.Location);
             var outParams = LuaAnnotationFormatter.WriteParameterAnnotations(sb, method.Params);
@@ -165,6 +200,30 @@ public class XLuaDumper : IDumper
 
     private void HandleCsInterface(CSInterface csInterface, StringBuilder sb)
     {
+        RegisterNamespace(csInterface.Namespace, csInterface.Name);
+        
+        // 检查接口继承
+        foreach (var iface in csInterface.Interfaces)
+        {
+            TypeTracker.CheckAndRecordType(iface);
+        }
+        
+        // 检查字段类型
+        foreach (var field in csInterface.Fields)
+        {
+            TypeTracker.CheckAndRecordType(field.TypeName);
+        }
+        
+        // 检查方法类型
+        foreach (var method in csInterface.Methods)
+        {
+            TypeTracker.CheckAndRecordType(method.ReturnTypeName);
+            foreach (var param in method.Params)
+            {
+                TypeTracker.CheckAndRecordType(param.TypeName);
+            }
+        }
+        
         sb.AppendLine($"---@interface {csInterface.Name}");
     }
 
@@ -193,6 +252,15 @@ public class XLuaDumper : IDumper
 
     private void HandleCsDelegate(CSDelegate csDelegate, StringBuilder sb)
     {
+        RegisterNamespace(csDelegate.Namespace, csDelegate.Name);
+        
+        // 检查委托的返回类型和参数类型
+        TypeTracker.CheckAndRecordType(csDelegate.InvokeMethod.ReturnTypeName);
+        foreach (var param in csDelegate.InvokeMethod.Params)
+        {
+            TypeTracker.CheckAndRecordType(param.TypeName);
+        }
+        
         LuaAnnotationFormatter.WriteDelegateAlias(sb, csDelegate.Name, csDelegate.InvokeMethod);
     }
 
