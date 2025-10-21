@@ -9,9 +9,19 @@ namespace EmmyLua.Unity.Generator.ToLua;
 /// </summary>
 public class ToLuaClassFinder
 {
+    // 静态标志，确保默认类型只添加一次
+    private static bool _defaultTypesAdded = false;
+
     public List<INamedTypeSymbol> GetAllValidTypes(Compilation compilation)
     {
         var toLuaBindMembers = new List<INamedTypeSymbol>();
+
+        // 添加默认导出的类型（只添加一次）
+        if (!_defaultTypesAdded)
+        {
+            AddDefaultTypes(compilation, toLuaBindMembers);
+            _defaultTypesAdded = true;
+        }
 
         foreach (var syntaxTree in compilation.SyntaxTrees)
         {
@@ -39,6 +49,25 @@ public class ToLuaClassFinder
         }
 
         return toLuaBindMembers;
+    }
+
+    /// <summary>
+    /// 添加 ToLua 默认导出的类型
+    /// </summary>
+    private void AddDefaultTypes(Compilation compilation, List<INamedTypeSymbol> types)
+    {
+        // ToLua 默认导出的泛型类型
+        var defaultTypeNames = new[]
+        {
+            "System.Collections.Generic.List`1",
+            "System.Collections.Generic.Dictionary`2"
+        };
+
+        foreach (var typeName in defaultTypeNames)
+        {
+            var typeSymbol = compilation.GetTypeByMetadataName(typeName);
+            if (typeSymbol != null) types.Add(typeSymbol);
+        }
     }
 
     /// <summary>

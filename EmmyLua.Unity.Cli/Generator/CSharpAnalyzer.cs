@@ -152,8 +152,28 @@ public class CSharpAnalyzer
         if (!symbol.AllInterfaces.IsEmpty)
             csType.Interfaces = symbol.AllInterfaces.Select(it => it.ToDisplayString()).ToList();
 
-        if (symbol is { TypeArguments.Length: > 0 })
-            csType.GenericTypes = symbol.TypeArguments.Select(it => it.ToDisplayString()).ToList();
+        // 处理泛型类型
+        if (symbol.IsGenericType)
+        {
+            if (symbol.IsUnboundGenericType || symbol.TypeParameters.Length > 0)
+            {
+                // 这是泛型定义 (如 List<T>)
+                csType.IsConstructedGeneric = false;
+                csType.GenericParameterNames = symbol.TypeParameters.Select(tp => tp.Name).ToList();
+                csType.GenericTypes = csType.GenericParameterNames;
+            }
+            else if (symbol.TypeArguments.Length > 0)
+            {
+                // 这是构造的泛型类型 (如 List<int>)
+                csType.IsConstructedGeneric = true;
+                csType.GenericTypes = symbol.TypeArguments.Select(it => it.ToDisplayString()).ToList();
+
+                // 同时获取原始泛型定义的参数名
+                var originalDefinition = symbol.OriginalDefinition;
+                if (originalDefinition != null && originalDefinition.TypeParameters.Length > 0)
+                    csType.GenericParameterNames = originalDefinition.TypeParameters.Select(tp => tp.Name).ToList();
+            }
+        }
 
         foreach (var member in symbol.GetMembers().Where(it => it is { DeclaredAccessibility: Accessibility.Public }))
             switch (member)

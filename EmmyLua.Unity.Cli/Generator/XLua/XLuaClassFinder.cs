@@ -11,12 +11,22 @@ namespace EmmyLua.Unity.Generator.XLua;
 /// </summary>
 public class XLuaClassFinder
 {
+    // 静态标志，确保默认类型只添加一次
+    private static bool _defaultTypesAdded = false;
+
     /// <summary>
     /// 获取所有标记为 LuaCallCSharp 的有效类型
     /// </summary>
     public List<INamedTypeSymbol> GetAllValidTypes(Compilation compilation)
     {
         var luaCallCSharpMembers = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+        // 添加默认导出的类型（只添加一次）
+        if (!_defaultTypesAdded)
+        {
+            AddDefaultTypes(compilation, luaCallCSharpMembers);
+            _defaultTypesAdded = true;
+        }
 
         foreach (var syntaxTree in compilation.SyntaxTrees)
         {
@@ -62,6 +72,25 @@ public class XLuaClassFinder
         return luaCallCSharpMembers
             .Where(type => IsValidType(type))
             .ToList();
+    }
+
+    /// <summary>
+    /// 添加 XLua 默认导出的类型
+    /// </summary>
+    private void AddDefaultTypes(Compilation compilation, HashSet<INamedTypeSymbol> types)
+    {
+        // XLua 默认导出的泛型类型
+        var defaultTypeNames = new[]
+        {
+            "System.Collections.Generic.List`1",
+            "System.Collections.Generic.Dictionary`2"
+        };
+
+        foreach (var typeName in defaultTypeNames)
+        {
+            var typeSymbol = compilation.GetTypeByMetadataName(typeName);
+            if (typeSymbol != null) types.Add(typeSymbol);
+        }
     }
 
     /// <summary>

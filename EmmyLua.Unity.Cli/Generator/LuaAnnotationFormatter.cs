@@ -157,38 +157,35 @@ public static class LuaAnnotationFormatter
         var inputParams = invokeMethod.Params
             .Where(p => p.Kind != Microsoft.CodeAnalysis.RefKind.Out)
             .ToList();
-        
+
         var paramsString = string.Join(", ",
-            inputParams.Select(p => 
+            inputParams.Select(p =>
             {
                 var luaType = LuaTypeConverter.ConvertToLuaTypeName(p.TypeName);
                 // 添加可选参数标记
                 return p.Nullable ? $"{p.Name}?: {luaType}" : $"{p.Name}: {luaType}";
             }));
-        
+
         // 收集返回值（包括 out 和 ref 参数）
         var returnTypes = new List<string>();
-        
+
         // 主返回值
         var mainReturnType = LuaTypeConverter.ConvertToLuaTypeName(invokeMethod.ReturnTypeName);
-        if (mainReturnType != "void")
-        {
-            returnTypes.Add(mainReturnType);
-        }
-        
+        if (mainReturnType != "void") returnTypes.Add(mainReturnType);
+
         // out 和 ref 参数作为额外返回值
         var outParams = invokeMethod.Params
             .Where(p => p.Kind is Microsoft.CodeAnalysis.RefKind.Out or Microsoft.CodeAnalysis.RefKind.Ref)
             .Select(p => LuaTypeConverter.ConvertToLuaTypeName(p.TypeName));
         returnTypes.AddRange(outParams);
-        
+
         var returnTypeString = returnTypes.Count switch
         {
             0 => "void",
             1 => returnTypes[0],
             _ => string.Join(", ", returnTypes)
         };
-        
+
         sb.AppendLine($"---@alias {delegateName} fun({paramsString}): {returnTypeString}");
     }
 

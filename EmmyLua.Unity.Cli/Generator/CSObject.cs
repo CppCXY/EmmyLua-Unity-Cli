@@ -18,10 +18,12 @@ public abstract class CSTypeBase
 public class CSTypeField : CSTypeBase
 {
     public string TypeName { get; set; } = string.Empty;
+
     /// <summary>
     /// The constant value for enum fields
     /// </summary>
     public object? ConstantValue { get; set; }
+
     /// <summary>
     /// Indicates if this field is an event
     /// </summary>
@@ -88,7 +90,24 @@ public abstract class CSType : CSTypeBase, IHasNamespace
 public sealed class CSClassType : CSType, IHasFields, IHasMethods
 {
     public string BaseClass { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 泛型类型参数（可能是具体类型或泛型参数）
+    /// 例如: ["int"] 或 ["T"]
+    /// </summary>
     public List<string> GenericTypes { get; set; } = [];
+
+    /// <summary>
+    /// 是否为构造的泛型类型（具体化的泛型类型，如 List&lt;int&gt;）
+    /// </summary>
+    public bool IsConstructedGeneric { get; set; }
+
+    /// <summary>
+    /// 泛型参数定义（仅对泛型定义有效）
+    /// 例如: ["T", "TKey", "TValue"]
+    /// </summary>
+    public List<string> GenericParameterNames { get; set; } = [];
+
     public List<string> Interfaces { get; set; } = [];
     public List<CSTypeField> Fields { get; } = [];
     public List<CSTypeMethod> Methods { get; } = [];
