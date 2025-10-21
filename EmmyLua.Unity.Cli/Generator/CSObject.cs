@@ -22,6 +22,10 @@ public class CSTypeField : CSTypeBase
     /// The constant value for enum fields
     /// </summary>
     public object? ConstantValue { get; set; }
+    /// <summary>
+    /// Indicates if this field is an event
+    /// </summary>
+    public bool IsEvent { get; set; }
 }
 
 /// <summary>

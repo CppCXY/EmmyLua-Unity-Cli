@@ -145,14 +145,23 @@ public class XLuaDumper : IDumper
 
         sb.AppendLine($"local {csClassType.Name} = {{}}");
 
-        // Write fields
+        // Write fields and events
         foreach (var field in csClassType.Fields)
         {
             // 检查字段类型
             TypeTracker.CheckAndRecordType(field.TypeName);
             
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location);
-            LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            
+            // 区分事件和普通字段
+            if (field.IsEvent)
+            {
+                LuaAnnotationFormatter.WriteEventAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            }
+            else
+            {
+                LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            }
         }
 
         // Write methods

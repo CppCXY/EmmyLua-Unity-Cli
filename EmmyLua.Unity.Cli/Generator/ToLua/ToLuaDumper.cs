@@ -171,14 +171,23 @@ public class ToLuaDumper : IDumper
         sb.AppendLine($"{csClassType.Name} = {{}}");
         sb.AppendLine();
 
-        // Write fields
+        // Write fields and events
         foreach (var field in csClassType.Fields)
         {
             // 检查字段类型
             TypeTracker.CheckAndRecordType(field.TypeName);
             
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location);
-            LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            
+            // 区分事件和普通字段
+            if (field.IsEvent)
+            {
+                LuaAnnotationFormatter.WriteEventAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            }
+            else
+            {
+                LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csClassType.Name, field.Name);
+            }
         }
 
         // Write methods
@@ -249,7 +258,16 @@ public class ToLuaDumper : IDumper
             TypeTracker.CheckAndRecordType(field.TypeName);
             
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location);
-            LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csInterface.Name, field.Name);
+            
+            // 区分事件和普通字段
+            if (field.IsEvent)
+            {
+                LuaAnnotationFormatter.WriteEventAnnotation(sb, field.TypeName, csInterface.Name, field.Name);
+            }
+            else
+            {
+                LuaAnnotationFormatter.WriteFieldAnnotation(sb, field.TypeName, csInterface.Name, field.Name);
+            }
         }
 
         foreach (var method in csInterface.Methods)
