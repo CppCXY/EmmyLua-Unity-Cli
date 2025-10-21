@@ -179,13 +179,13 @@ public class XLuaDumper : IDumper
 
         sb.AppendLine($"local {csEnumType.Name} = {{");
 
-        var counter = 0;
         foreach (var field in csEnumType.Fields)
         {
             LuaAnnotationFormatter.WriteCommentAndLocation(sb, field.Comment, field.Location, 4);
-            sb.AppendLine($"    {field.Name} = {counter},");
+            // 使用实际的枚举值，如果没有则默认为 0
+            var enumValue = field.ConstantValue ?? 0;
+            sb.AppendLine($"    {field.Name} = {enumValue},");
             sb.AppendLine();
-            counter++;
         }
 
         sb.AppendLine("}");

@@ -18,6 +18,10 @@ public abstract class CSTypeBase
 public class CSTypeField : CSTypeBase
 {
     public string TypeName { get; set; } = string.Empty;
+    /// <summary>
+    /// The constant value for enum fields
+    /// </summary>
+    public object? ConstantValue { get; set; }
 }
 
 /// <summary>

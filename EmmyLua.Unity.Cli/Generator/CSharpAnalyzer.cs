@@ -74,7 +74,9 @@ public class CSharpAnalyzer
                 IPropertySymbol propSymbol => propSymbol.Type.ToDisplayString(),
                 IEventSymbol eventSymbol => eventSymbol.Type.ToDisplayString(),
                 _ => "any"
-            }
+            },
+            // 获取枚举字段的常量值
+            ConstantValue = symbol is IFieldSymbol fs && fs.HasConstantValue ? fs.ConstantValue : null
         };
 
         FillBaseInfo(symbol, field);

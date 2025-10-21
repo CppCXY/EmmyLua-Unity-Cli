@@ -237,12 +237,12 @@ public class ToLuaDumper : IDumper
         sb.AppendLine($"{csEnumType.Name} = {{}}");
         sb.AppendLine();
 
-        var counter = 0;
         foreach (var field in csEnumType.Fields)
         {
             if (!string.IsNullOrEmpty(field.Comment)) sb.AppendLine($"---{field.Comment}");
-            sb.AppendLine($"{csEnumType.Name}.{field.Name} = {counter}");
-            counter++;
+            // 使用实际的枚举值，如果没有则默认为 0
+            var enumValue = field.ConstantValue ?? 0;
+            sb.AppendLine($"{csEnumType.Name}.{field.Name} = {enumValue}");
         }
 
         sb.AppendLine();
